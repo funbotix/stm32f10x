@@ -29,7 +29,7 @@ void startup()
 	pRAM = &_DATA_RAM_START;
 	pEND = &_DATA_RAM_END;
 	while(pRAM != pEND)
-    {
+	{
 		*pRAM++ = *pROM++;
 	}
 
