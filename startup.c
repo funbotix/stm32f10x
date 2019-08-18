@@ -20,21 +20,27 @@ extern int main();
 
 void startup()
 {
+    uint32_t* pROM; // where to copy from
+    uint32_t* pRAM; // where to copy to
+    uint32_t* pEND; // when (where) to stop copying (to)
+
     /* Copy data from ROM to RAM to initialize variables. */
-	uint32_t* pROM_data_start = &_DATA_ROM_START;
-	uint32_t* pRAM_data_start = &_DATA_RAM_START;
-	uint32_t* pRAM_data_end = &_DATA_RAM_END;
-	while(pRAM_data_start != pRAM_data_end)
+	pROM = &_DATA_ROM_START;
+	pRAM = &_DATA_RAM_START;
+	pEND = &_DATA_RAM_END;
+	while(pRAM != pEND)
     {
-		*pRAM_data_start++ = *pROM_data_start++;
+		*pRAM++ = *pROM++;
 	}
+
     /* Zero fill the unitialized variables in RAM. */
-	uint32_t* pBSS_start = &_BSS_START;
-	uint32_t* pBSS_end = &_BSS_END;
-	while(pBSS_start != pBSS_end)
+	pRAM = &_BSS_START;
+	pEND = &_BSS_END;
+	while(pRAM != pEND)
 	{
-		*pBSS_start++ = 0;
+		*pRAM++ = 0;
 	}
+
     /* Call the "main" function */
 	main();
 }
