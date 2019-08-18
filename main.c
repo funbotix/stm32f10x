@@ -22,36 +22,21 @@ void set_LED(const uint8_t state){
 
 //-----------------------------------------------------------------------------
 
-// The default clock source on startup is an 8 MHz internal high speed clock.
-#define CLOCK_FREQUENCY (8000000) // 8 MHz
-#define CLOCK_SECONDS (1.0f/(float)CLOCK_FREQUENCY) // 125 usecs
-#define CLOCKS_PER_DELAY_CYCLE (5)
-#define DELAY_CYCLE_SECONDS ((float)CLOCKS_PER_DELAY_CYCLE*CLOCK_SECONDS) // 625 usecs
-
-// Macros to compute num required delay cycles for seconds or milliseconds
-#define DELAY_SECONDS(seconds) ((unsigned)((float)seconds/DELAY_CYCLE_SECONDS)+0.5f)
-#define DELAY_MSECS(msecs)((unsigned)((float)DELAY_SECONDS((msecs)/1000.0f)+0.5))
-
-void delay(uint32_t cycles){ // super-primitive el-cheapo-deluxe blocking delay function
-    while(cycles--);
-}
-
-//-----------------------------------------------------------------------------
-
 void initialize(void){ // Initialize microcontroller and board features.
 
     // Enable the clock for the GPIO port C peripheral.
     RCC->APB2ENR |= BIT(APB2ENR_IOPCEN); 
 
-    // Configure GPIO port C bit 13 as an output I/O pin.
-    // Clear CNF13 and MODE13 fields.
+    // Configure GPIO port C bit 13 as a 10 MHz max speed output I/O pin.
+    // Set CNF13 field to 0 (general purpose push-pull output)
+    // Set MODE13 field to 1 (output has max speed of 10 MHz) 
     PORTC->CRH &= ~0x00F00000;
-
-    // CNF13=0 (general purpose push-pull output)
-    // MODE13=1 (output has max speed of 10 MHz) 
     PORTC->CRH |=  0x00100000;
 
     set_LED(ON);
+
+    // Configure the systick timer for 1 msec tick rate (resolution of elapsed time measurements).
+    set_systick_frequency(1000);
 }
 
 //-----------------------------------------------------------------------------
@@ -60,16 +45,19 @@ int main(){
     initialize();
 
     // Pulse the heartbeat LED (blink-blink-wait-wait) once/second
-    const uint32_t delay_count = DELAY_MSECS(125);  
     const uint8_t pattern = 0x05;
     uint8_t index = 7;
+    uint32_t ticker = get_ticker();
     for(;;){
-        if(++index > 7){
-            index = 0; // the pattern repeats once/second (8 * 125 msecs)
+        if(elapsed_ticks(ticker) >= 125){ // execute the heartbeat LED update code once every 125 msecs
+            ticker = get_ticker();
+            if(++index > 7){
+                index = 0; // the pattern repeats once/second (8 * 125 msecs)
+            }
+            const uint8_t state = (pattern & BIT(index)) ? ON : OFF;
+            set_LED(state);
         }
-        const uint8_t state = (pattern & BIT(index)) ? ON : OFF;
-        set_LED(state);
-        delay(delay_count);
+        // other code can run while waiting for the heartbead LED update interval to expire
     }
     return 0;
 } 
